@@ -1,0 +1,36 @@
+import { UniqueEntityID } from "src/core/entities/unique-entity-id";
+import { Question } from "../../enterprise/entities/question";
+import { QuestionsRepository } from "../repositories/questions-repository";
+
+interface DeleteQuestionUseCaseRequest {
+  authorId: string
+  questionId: string
+}
+
+interface DeleteQuestionUseCaseResponse {
+}
+
+export class DeleteQuestionUseCase {
+  constructor(private questionRepository: QuestionsRepository) { }
+
+  async execute({
+    authorId,
+    questionId
+  }: DeleteQuestionUseCaseRequest): Promise<DeleteQuestionUseCaseResponse> {
+    const question = await this.questionRepository.findByID(questionId)
+
+    if (!question) {
+      throw new Error('Question not found.')
+    }
+
+    if (authorId !== question.authorId.toString()) {
+      throw new Error('User not allowed')
+    }
+
+    await this.questionRepository.delete(question)
+
+    return {
+      question
+    }
+  }
+}
