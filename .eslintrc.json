@@ -7,7 +7,7 @@
     "no-useless-constructor": "off",
     "eslint-disable prettier/prettier": true
   },
-  "env": {
-    "vitest-globals/env": true
-  }
+  // "env": {
+  //   "vitest-globals/env": true
+  // }
 }
