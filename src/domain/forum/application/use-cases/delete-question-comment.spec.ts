@@ -3,6 +3,7 @@ import { InMemoryQuestionCommentsRepository } from 'test/repositories/in-memory-
 import { DeleteQuestionCommentUseCase } from './delete-question-comment'
 import { makeQuestionComment } from 'test/factories/make-question-comment'
 import { UniqueEntityID } from 'src/core/entities/unique-entity-id'
+import { NotAllowedError } from './errors/not-allowed-error'
 
 let inMemoryQuestionsCommentRepository: InMemoryQuestionCommentsRepository
 let sut: DeleteQuestionCommentUseCase
@@ -35,10 +36,13 @@ describe('Choose Question Best Answer', () => {
 
     await inMemoryQuestionsCommentRepository.create(questionComment)
 
-    expect(async () => await sut.execute({
-      authorId: new UniqueEntityID('author-2').toString(),
-      questionCommentId: questionComment.id.toString()
-    })).rejects.toBeInstanceOf(Error)
+    const result = await sut.execute({
+      questionCommentId: questionComment.id.toString(),
+      authorId: 'author-2',
+    })
+
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBeInstanceOf(NotAllowedError)
   })
 
 })
