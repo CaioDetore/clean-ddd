@@ -4,32 +4,68 @@ import { UniqueEntityID } from 'src/core/entities/unique-entity-id'
 import { EditAnswerUseCase } from './edit-answer'
 import { InMemoryAnswerRepository } from 'test/repositories/in-memory-answer-repository'
 import { NotAllowedError } from './errors/not-allowed-error'
+import { InMemoryAnswerAttachmentsRepository } from 'test/repositories/in-memory-answer-attachments-repository'
+import { makeAnswerAttachment } from 'test/factories/make-answer-attachment'
 
+let inMemoryAnswerAttachmentsRepository: InMemoryAnswerAttachmentsRepository
 let inMemoryAnswersRepository: InMemoryAnswerRepository
 let sut: EditAnswerUseCase
 
 describe('Edit Answer', () => {
   beforeEach(() => {
-    inMemoryAnswersRepository = new InMemoryAnswerRepository()
-    sut = new EditAnswerUseCase(inMemoryAnswersRepository)
+    inMemoryAnswerAttachmentsRepository =
+      new InMemoryAnswerAttachmentsRepository()
+    inMemoryAnswersRepository = new InMemoryAnswerRepository(
+      inMemoryAnswerAttachmentsRepository,
+    )
+
+    sut = new EditAnswerUseCase(
+      inMemoryAnswersRepository,
+      inMemoryAnswerAttachmentsRepository,
+    )
   })
 
-  it('should be able to delete a answer', async () => {
-    const newAnswer = makeAnswer({
-      authorId: new UniqueEntityID('author-1'),
-    }, new UniqueEntityID('answer-1'))
+  it('should be able to edit a answer', async () => {
+    const newAnswer = makeAnswer(
+      {
+        authorId: new UniqueEntityID('author-1'),
+      },
+      new UniqueEntityID('answer-1'),
+    )
 
     await inMemoryAnswersRepository.create(newAnswer)
-    
+
+    inMemoryAnswerAttachmentsRepository.items.push(
+      makeAnswerAttachment({
+        answerId: newAnswer.id,
+        attachmentId: new UniqueEntityID('1'),
+      }),
+      makeAnswerAttachment({
+        answerId: newAnswer.id,
+        attachmentId: new UniqueEntityID('2'),
+      }),
+    )
+
     await sut.execute({
+      answerId: newAnswer.id.toValue(),
       authorId: 'author-1',
-      content: 'Conteudo teste',
-      answerId: newAnswer.id.toString()
+      content: 'Conteúdo teste',
+      attachmentsIds: ['1', '3'],
     })
 
     expect(inMemoryAnswersRepository.items[0]).toMatchObject({
-      content: 'Conteudo teste',
+      content: 'Conteúdo teste',
     })
+
+    expect(
+      inMemoryAnswersRepository.items[0].attachments.currentItems,
+    ).toHaveLength(2)
+    expect(inMemoryAnswersRepository.items[0].attachments.currentItems).toEqual(
+      [
+        expect.objectContaining({ attachmentId: new UniqueEntityID('1') }),
+        expect.objectContaining({ attachmentId: new UniqueEntityID('3') }),
+      ],
+    )
   })
 
   it('should not be able to delete a answer from another author', async () => {
@@ -38,11 +74,12 @@ describe('Edit Answer', () => {
     }, new UniqueEntityID('answer-1'))
 
     await inMemoryAnswersRepository.create(newAnswer)
-    
+
     const result = await sut.execute({
       answerId: newAnswer.id.toValue(),
       authorId: 'author-2',
       content: 'Conteúdo teste',
+      attachmentsIds: []
     })
 
     expect(result.isLeft()).toBe(true)

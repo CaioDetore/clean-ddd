@@ -3,13 +3,19 @@ import { InMemoryAnswerRepository } from 'test/repositories/in-memory-answer-rep
 import { FetchQuestionsAnswersUseCase } from './fetch-question-answers'
 import { makeAnswer } from 'test/factories/make-answer'
 import { UniqueEntityID } from 'src/core/entities/unique-entity-id'
+import { InMemoryAnswerAttachmentsRepository } from 'test/repositories/in-memory-answer-attachments-repository'
 
+let inMemoryAnswerAttachmentsRepository: InMemoryAnswerAttachmentsRepository
 let inMemoryAnswersRepository: InMemoryAnswerRepository
 let sut: FetchQuestionsAnswersUseCase
 
 describe('Fetch Answers Answers', () => {
   beforeEach(() => {
-    inMemoryAnswersRepository = new InMemoryAnswerRepository()
+    inMemoryAnswerAttachmentsRepository =
+      new InMemoryAnswerAttachmentsRepository()
+    inMemoryAnswersRepository = new InMemoryAnswerRepository(
+      inMemoryAnswerAttachmentsRepository,
+    )
     sut = new FetchQuestionsAnswersUseCase(inMemoryAnswersRepository)
   })
 
@@ -18,7 +24,7 @@ describe('Fetch Answers Answers', () => {
     await inMemoryAnswersRepository.create(makeAnswer({ questionId: new UniqueEntityID('question-1') }))
     await inMemoryAnswersRepository.create(makeAnswer({ questionId: new UniqueEntityID('question-1') }))
 
-    const result  = await sut.execute({
+    const result = await sut.execute({
       page: 1,
       questionId: 'question-1'
     })
@@ -26,14 +32,14 @@ describe('Fetch Answers Answers', () => {
     expect(result.value?.answers).toHaveLength(3)
   })
 
-  it.skip('should be able to fetch paginated question answers', async () => {
+  it('should be able to fetch paginated question answers', async () => {
     for (let i = 1; i <= 22; i++) {
       await inMemoryAnswersRepository.create(makeAnswer({
         questionId: new UniqueEntityID('question-1')
       }))
     }
 
-    const result  = await sut.execute({
+    const result = await sut.execute({
       page: 2,
       questionId: 'question-1'
     })
